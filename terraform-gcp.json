@@ -1,0 +1,22 @@
+{
+    "node": {
+        "base_image": "gcr.io/octopus-dev-309403/substrate-octopus@sha256:5b4694fa7bf522fee76ecd607a76e312b19757005977de4c7c0c2c9869e31934",
+        "start_cmd": "node-template",
+        "name": "MyNode-1",
+        "bootnodes": [
+            "/ip4/35.73.22.253/tcp/30333/p2p/12D3KooWSQcDKcVTt7TS5s7tYu7MGQfECMPgSSuYdoMNcEM4hS6x",
+            "/ip4/35.73.194.168/tcp/30333/p2p/12D3KooWGG339wvFSeSMAPwjkHCUoKXxKvpGdG6YGCx4SJjgHUrc",
+            "/ip4/35.73.193.96/tcp/30333/p2p/12D3KooWDiYjwqJx69B2gZAdHhsixb8yUUZwu5VDCTV1H6yZYStz",
+            "/ip4/52.194.19.178/tcp/30333/p2p/12D3KooWMrnEU7QwBcnj4xJycSiyZDvRmbhLXRcTto4wLmr262wf"
+        ],
+        "chainspec_url": "https://storage.googleapis.com/dl-testnet/barnacle-beta/barnacleBeta3SpecRaw.json",
+        "chainspec_checksum": "sha256:b1bf4d6c6ead705fa58070db0092a25f5d999b4650bd4d657450f9db14be6112"
+    },
+    "vm": {
+        "region": "asia-northeast1",
+        "instance_type": "e2-small",
+        "instance_count": 1,
+        "volume_type": "pd-standard",
+        "volume_size": 80
+    }
+}

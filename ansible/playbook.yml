@@ -1,0 +1,5 @@
+---
+- hosts: all
+  roles:
+    # - { role: node_exporter, become: yes, when: "node_exporter_enabled|default(false)|bool == true" }
+    - bootnodes

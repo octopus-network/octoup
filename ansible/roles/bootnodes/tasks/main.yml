@@ -1,0 +1,96 @@
+---
+- name: Install basic list of packages
+  apt:
+    name: "{{ packages }}"
+    state: present
+    update_cache: yes
+  vars:
+    packages:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+      - python3-pip
+  register: apt_install
+  retries: 10
+  until: apt_install is success
+  become: yes
+  become_method: sudo
+
+- name: Install docker docker-compose python package
+  pip:
+    name: docker-compose
+    executable: pip3
+  become: yes
+
+- name: Add docker GPG key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+  become: yes
+
+- name: Add apt repository
+  apt_repository:
+    repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+  become: yes
+
+- name: Install docker packages
+  apt:
+    name: "{{ packages }}"
+    state: present
+  vars:
+    packages:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+  become: yes
+
+- name: Add user to docker group
+  user:
+    name: "{{ ansible_env.USER }}"
+    groups: docker
+    append: yes
+  become: yes
+
+- name: Ensure docker service is enabled
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+  become: yes
+
+
+- name: Reset ssh connection to added 'docker' group into account
+  meta: reset_connection
+
+- name: Pull docker image
+  community.docker.docker_image:
+    name: '{{ base_image }}'
+    source: pull
+
+- name: Create octoup directory
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/octoup/chain_data"
+    state: directory
+    recurse: yes
+    mode: '0755'
+
+- name: Download raw chainspec with check (sha256)
+  get_url:
+    url: '{{ chainspec_url }}'
+    dest: '{{ ansible_env.HOME }}/octoup/chainSpec.json'
+    checksum: '{{ chainspec_checksum }}'
+
+- name: Generate docker-compose.yaml
+  template: 
+    src: docker-compose.yaml.j2 
+    dest: '{{ ansible_env.HOME }}/octoup/docker-compose.yaml'
+
+- name: Run `docker-compose up`
+  community.docker.docker_compose:
+    project_src: '{{ ansible_env.HOME }}/octoup'
+    build: no
+  register: output
+
+- ansible.builtin.debug:
+    var: output
