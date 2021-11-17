@@ -75,12 +75,6 @@
     recurse: yes
     mode: '0755'
 
-- name: Download raw chainspec with check (sha256)
-  get_url:
-    url: '{{ chainspec_url }}'
-    dest: '{{ ansible_env.HOME }}/octoup/chainSpec.json'
-    checksum: '{{ chainspec_checksum }}'
-
 - name: Generate docker-compose.yaml
   template: 
     src: docker-compose.yaml.j2 

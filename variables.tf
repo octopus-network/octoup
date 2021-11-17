@@ -5,9 +5,7 @@ variable "node" {
     base_image         = string
     start_cmd          = string
     name               = string
-    bootnodes          = list(string)
-    chainspec_url      = string
-    chainspec_checksum = string
+    chain_spec          = string
   })
 }
 

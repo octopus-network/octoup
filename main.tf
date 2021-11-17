@@ -64,9 +64,7 @@ module "ansible" {
     base_image         = var.node.base_image
     start_cmd          = var.node.start_cmd
     node_name          = var.node.name
-    bootnodes          = jsonencode(var.node.bootnodes)
-    chainspec_url      = var.node.chainspec_url
-    chainspec_checksum = var.node.chainspec_checksum
+    chain_spec         = var.node.chain_spec
 
     node_exporter_enabled         = var.node_exporter.node_exporter_enabled
     node_exporter_binary_url      = var.node_exporter.node_exporter_binary_url

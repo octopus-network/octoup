@@ -8,7 +8,7 @@ services:
       {{ start_cmd }}
 {% endif %}
       --base-path /substrate/chain_data
-      --chain /substrate/chainSpec.json
+      --chain {{ chain_spec }}
       --port 30333
       --rpc-port 9933
       --rpc-cors all
@@ -22,9 +22,6 @@ services:
       --prometheus-external
       --prometheus-port 9615
       --wasm-execution Compiled
-{% for node in bootnodes|from_json %}
-      --bootnodes {{ node }}
-{% endfor %}
     ports:
       - 9615:9615
       - 9933:9933
@@ -32,5 +29,4 @@ services:
       - 30333:30333
     volumes:
       - ./chain_data:/substrate/chain_data
-      - ./chainSpec.json:/substrate/chainSpec.json
     restart: always
