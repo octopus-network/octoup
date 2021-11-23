@@ -3,7 +3,8 @@
         "base_image": "gcr.io/octopus-dev-309403/substrate-octopus@sha256:5b4694fa7bf522fee76ecd607a76e312b19757005977de4c7c0c2c9869e31934",
         "start_cmd": "node-template",
         "name": "MyNode-1",
-        "chain_spec": "barnacle-beta"
+        "chain_spec": "barnacle-beta",
+        "telemetry_url": "wss://telemetry.testnet.octopus.network/submit 0"
     },
     "vm": {
         "region": "asia-northeast1",

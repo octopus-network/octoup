@@ -18,10 +18,9 @@ services:
       --ws-external
       --name {{ node_name }}
       --validator
-      --no-telemetry
       --prometheus-external
       --prometheus-port 9615
-      --wasm-execution Compiled
+      --telemetry-url {{ telemetry_url }}
     ports:
       - 9615:9615
       - 9933:9933

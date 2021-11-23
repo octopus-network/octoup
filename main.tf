@@ -65,6 +65,7 @@ module "ansible" {
     start_cmd          = var.node.start_cmd
     node_name          = var.node.name
     chain_spec         = var.node.chain_spec
+    telemetry_url      = var.node.telemetry_url
 
     node_exporter_enabled         = var.node_exporter.node_exporter_enabled
     node_exporter_binary_url      = var.node_exporter.node_exporter_binary_url

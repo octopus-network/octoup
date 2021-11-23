@@ -5,7 +5,8 @@ variable "node" {
     base_image         = string
     start_cmd          = string
     name               = string
-    chain_spec          = string
+    chain_spec         = string
+    telemetry_url      = string
   })
 }
 
