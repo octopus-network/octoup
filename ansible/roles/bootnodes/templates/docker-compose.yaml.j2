@@ -20,7 +20,7 @@ services:
       --validator
       --prometheus-external
       --prometheus-port 9615
-      --telemetry-url {{ telemetry_url }}
+      --telemetry-url "{{ telemetry_url }}"
     ports:
       - 9615:9615
       - 9933:9933
