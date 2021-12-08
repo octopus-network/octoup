@@ -46,9 +46,9 @@
   become: yes
 
 - name: Add user to docker group
-  user:
+  ansible.builtin.user:
     name: "{{ ansible_env.USER }}"
-    groups: docker
+    group: docker
     append: yes
   become: yes
 
@@ -58,7 +58,6 @@
     state: started
     enabled: yes
   become: yes
-
 
 - name: Reset ssh connection to added 'docker' group into account
   meta: reset_connection
@@ -76,9 +75,15 @@
     mode: '0755'
 
 - name: Generate docker-compose.yaml
-  template: 
+  ansible.builtin.template: 
     src: docker-compose.yaml.j2 
     dest: '{{ ansible_env.HOME }}/octoup/docker-compose.yaml'
+
+- name: Copy nginx.conf
+  ansible.builtin.copy:
+    src: nginx.conf
+    dest: '{{ ansible_env.HOME }}/octoup/nginx.conf'
+    mode: '0644'
 
 - name: Run `docker-compose up`
   community.docker.docker_compose:
@@ -86,5 +91,6 @@
     build: no
   register: output
 
-- ansible.builtin.debug:
+- name: Output
+  ansible.builtin.debug:
     var: output
