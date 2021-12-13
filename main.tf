@@ -32,8 +32,8 @@ resource "null_resource" "ssh-key" {
 
 # aws | gcp | ...
 module "node" {
-  # source          = "./multi-cloud/aws"
-  source          = "./multi-cloud/gcp"
+  source          = "./multi-cloud/aws"
+  # source          = "./multi-cloud/gcp"
   region          = var.vm.region
   instance_count  = var.vm.instance_count
   instance_type   = var.vm.instance_type

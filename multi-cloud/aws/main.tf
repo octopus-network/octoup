@@ -2,13 +2,13 @@ provider "aws" {
   region = var.region
 }
 
-data "aws_vpc" "default" {
-  default = true
-}
+# data "aws_vpc" "default" {
+#   default = true
+# }
 
-data "aws_subnet_ids" "default" {
-  vpc_id = data.aws_vpc.default.id
-}
+# data "aws_subnet_ids" "default" {
+#   vpc_id = data.aws_vpc.default.id
+# }
 
 data "aws_ami" "ubuntu" {
   most_recent = true
@@ -27,11 +27,20 @@ data "aws_ami" "ubuntu" {
   owners = ["099720109477"]
 }
 
+module "vpc" {
+  source     = "terraform-aws-modules/vpc/aws"
+  name       = "vpc-${var.id}"
+
+  cidr               = "10.0.0.0/16"
+  azs                = ["${var.region}a"]
+  public_subnets     = ["10.0.1.0/24"]
+}
+
 module "default_sg" {
   source = "terraform-aws-modules/security-group/aws"
   name   = "default-sg-${var.id}"
 
-  vpc_id                   = data.aws_vpc.default.id
+  vpc_id                   = module.vpc.vpc_id
   egress_cidr_blocks       = ["0.0.0.0/0"]
   egress_ipv6_cidr_blocks  = ["::/0"]
   egress_rules             = ["all-all"]
@@ -82,7 +91,7 @@ module "ec2" {
   instance_type               = var.instance_type
   monitoring                  = true
   vpc_security_group_ids      = [module.default_sg.security_group_id]
-  subnet_id                   = tolist(data.aws_subnet_ids.default.ids)[0]
+  subnet_id                   = module.vpc.public_subnets[0]
   associate_public_ip_address = true
   root_block_device = [
     {
