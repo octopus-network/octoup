@@ -49,7 +49,7 @@ variable "node_exporter" {
     node_exporter_password        = string
   })
   default = {
-    node_exporter_enabled         = false
+    node_exporter_enabled         = true
     node_exporter_binary_url      = "https://github.com/prometheus/node_exporter/releases/download/v1.1.2/node_exporter-1.1.2.linux-amd64.tar.gz"
     node_exporter_binary_checksum = "sha256:8c1f6a317457a658e0ae68ad710f6b4098db2cad10204649b51e3c043aa3e70d"
     node_exporter_port            = 9100

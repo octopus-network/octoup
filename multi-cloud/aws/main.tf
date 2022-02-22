@@ -74,6 +74,15 @@ module "default_sg" {
       # ipv6_cidr_block = "::/0"
       rule_no     = 103
     },
+    {
+      from_port   = 9100
+      to_port     = 9100
+      protocol    = "tcp"
+      description = "node exporter port"
+      cidr_blocks = "0.0.0.0/0"
+      # ipv6_cidr_block = "::/0"
+      rule_no     = 104
+    },
   ]
 }
 
