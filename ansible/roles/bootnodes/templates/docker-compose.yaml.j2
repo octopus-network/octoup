@@ -20,6 +20,7 @@ services:
       --validator
       --prometheus-external
       --prometheus-port 9615
+      --wasm-execution Compiled
       --telemetry-url "{{ telemetry_url }}"
     volumes:
       - ./chain_data:/substrate/chain_data
