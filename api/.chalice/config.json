@@ -1,0 +1,60 @@
+{
+  "version": "2.0",
+  "app_name": "seashell",
+  "stages": {
+    "dev": {
+      "autogen_policy": false,
+      "api_gateway_stage": "api",
+      "automatic_layer": true,
+      "environment_variables": {
+        "TASKS_TABLE_NAME": "",
+        "TASKS_TABLE_STREAM": "",
+        "TASKS_LOG_TABLE_NAME": "",
+        "WEBSOCKET_TABLE_NAME": "",
+        "TASKS_QUEUE_URL": "",
+        "TASKS_QUEUE_NAME": "",
+        "OCTOUP_BUCKET": "",
+        "OCTOUP_PREFIX": "",
+        "USER_POOL_ARN": "",
+        "USER_POOL_ID": "",
+        "USER_POOL_CLIENT_ID": "",
+        "WEBSOCKET_DOMAIN_NAME": "",
+        "WEBSOCKET_STAGE": "",
+
+        "OCTOUP_EC2_AMI_AWS": "",
+        "OCTOUP_EC2_AMI_GCP": "",
+        "OCTOUP_EC2_KEY": "...",
+
+        "SUBSTRATE_TELEMETRY_URL": "wss://telemetry.testnet.octopus.network/submit 9"
+      }
+    },
+    "prod": {
+      "autogen_policy": false,
+      "api_gateway_stage": "api",
+      "automatic_layer": true,
+      "environment_variables": {
+        "TASKS_TABLE_NAME": "",
+        "TASKS_TABLE_STREAM": "",
+        "TASKS_LOG_TABLE_NAME": "",
+        "WEBSOCKET_TABLE_NAME": "",
+        "TASKS_QUEUE_URL": "",
+        "TASKS_QUEUE_NAME": "",
+        "OCTOUP_BUCKET": "",
+        "OCTOUP_PREFIX": "",
+        "USER_POOL_ARN": "",
+        "USER_POOL_ID": "",
+        "USER_POOL_CLIENT_ID": "",
+        "WEBSOCKET_DOMAIN_NAME": "",
+        "WEBSOCKET_STAGE": "",
+
+        "OCTOUP_EC2_AMI_AWS": "",
+        "OCTOUP_EC2_AMI_GCP": "",
+        "OCTOUP_EC2_KEY": "",
+
+        "SUBSTRATE_TELEMETRY_URL": "wss://telemetry.mainnet.octopus.network/submit 9"
+      }
+    }
+  }
+}
+
+
