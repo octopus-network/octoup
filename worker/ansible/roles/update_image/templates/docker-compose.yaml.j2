@@ -1,0 +1,36 @@
+version: "3.8"
+services:
+  octoup:
+    image: {{ base_image }}
+    container_name: octoup
+    command: >
+{% if start_cmd is defined and start_cmd|length %}
+      {{ start_cmd }}
+{% endif %}
+      --base-path /substrate/chain_data
+      --chain {{ chain_spec }}
+      --port 30333
+      --rpc-port 9933
+      --rpc-cors all
+      --rpc-external
+      --rpc-methods Unsafe
+      --ws-port 9944
+      --ws-external
+      --name {{ node_name }}
+      --validator
+      --prometheus-external
+      --prometheus-port 9615
+      --wasm-execution Compiled
+      --telemetry-url "{{ telemetry_url }}"
+    volumes:
+      - ./chain_data:/substrate/chain_data
+  nginx:
+    image: nginx:1.21.4
+    container_name: nginx
+    ports:
+      - 9933:9933
+      - 30333:30333
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - octoup

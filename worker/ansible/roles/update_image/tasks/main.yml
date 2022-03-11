@@ -1,0 +1,26 @@
+---
+- name: Pull docker image
+  community.docker.docker_image:
+    name: '{{ base_image }}'
+    source: pull
+
+- name: Run `docker-compose down`
+  community.docker.docker_compose:
+    project_src: '{{ ansible_env.HOME }}/octoup'
+    build: no
+    state: absent
+
+- name: Generate docker-compose.yaml
+  ansible.builtin.template: 
+    src: docker-compose.yaml.j2 
+    dest: '{{ ansible_env.HOME }}/octoup/docker-compose.yaml'
+
+- name: Run `docker-compose up`
+  community.docker.docker_compose:
+    project_src: '{{ ansible_env.HOME }}/octoup'
+    build: no
+  register: output
+
+- name: Output
+  ansible.builtin.debug:
+    var: output

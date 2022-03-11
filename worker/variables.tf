@@ -1,15 +1,3 @@
-#
-variable "node" {
-  description = "Validator config"
-  type = object({
-    base_image         = string
-    start_cmd          = string
-    name               = string
-    chain_spec         = string
-    telemetry_url      = string
-  })
-}
-
 # 
 variable "vm" {
   description = "vm config"
@@ -35,6 +23,25 @@ variable "vm" {
     # volume_type    = "pd-standard"
     # volume_size    = 80
   }
+}
+
+#
+variable "action" {
+  description = "Action config"
+  type        = string
+  default     = "setup" # setup/update
+}
+
+#
+variable "node" {
+  description = "Validator config"
+  type = object({
+    base_image         = string
+    start_cmd          = string
+    name               = string
+    chain_spec         = string
+    telemetry_url      = string
+  })
 }
 
 #

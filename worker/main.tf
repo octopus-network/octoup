@@ -57,7 +57,7 @@ module "ansible" {
 
   user               = "ubuntu"
   ips                = module.node.public_ip_address
-  playbook_file_path = "ansible/playbook.yml"
+  playbook_file_path = "ansible/${var.action}.yml"
   private_key_path   = "workspace/${random_id.this.hex}/ssh/id_rsa"
   inventory_file     = local_file.ansible-inventory.filename
   playbook_vars      = {
