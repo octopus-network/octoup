@@ -101,6 +101,9 @@ STATUS_APPLY_SUCCESS   = '12'
 STATUS_DESTROY_PROCESS = '20'
 STATUS_DESTROY_FAILED  = '21'
 STATUS_DESTROY_SUCCESS = '22'
+STATUS_UPDATE_PROCESS  = '30'
+STATUS_UPDATE_FAILED   = '31'
+STATUS_UPDATE_SUCCESS  = '32'
 
 IP_ADDRESS_RE = r"\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b"
 
@@ -167,6 +170,18 @@ if [[ "$terraform_workspace" == *"$UUID"* ]]; then
 else
     echo "terraform workspace new $UUID -no-color" | tee "$WORKSPACE/$LOG_FILE"
     terraform workspace new $UUID -no-color 2>&1 | tee -a "$WORKSPACE/$LOG_FILE"
+fi
+
+# patch: update -> apply
+if [ "$ACTION" = "update" ]; then
+    ACTION="apply"
+
+    # rm ansible.sh
+    if [ -f "$WORKSPACE/ansible.sh" ]; then
+        rm -rf "$WORKSPACE/ansible.sh"
+    fi
+    # 644 -> 400 id_rsa
+    chmod 400 "$WORKSPACE/id_rsa"
 fi
 
 # terraform apply/destroy

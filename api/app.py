@@ -263,8 +263,13 @@ def delete_task(uuid):
 @app.route('/tasks/{uuid}', methods=['PUT'], cors=True, authorizer=authorizer)
 def update_task(uuid):
     """
-    init 0 -> apply 10 -> 11/12
-    11, 12 -> destroy 20 -> 21/22
+    apply:
+        init 0 -> apply 10 -> 11/12
+    destroy:
+        11, 12 -> destroy 20 -> 21/22
+    update:
+        12 -> update 30 -> 31/32
+        31/32 -> destroy 20 -> 21/22
     # https://docs.aws.amazon.com/zh_cn/AWSSimpleQueueService/latest/APIReference/API_SendMessage.html
     """
     user = get_authorized_username(app.current_request)
@@ -278,11 +283,16 @@ def update_task(uuid):
     if len(secret) < 8:
         raise BadRequestError("Invalid secret_key|access_token")
 
+    # check update paramaters: base_image
+    base_image = body.get('base_image')
+    if action == 'update' and not base_image:
+        raise BadRequestError("Invalid docker image")
+
     hidden = secret[:4] + '*'*max(len(secret)-8, 0) + secret[-4:]
-    app.log.info(f'{user} - {action} - {uuid} - {hidden}')
+    app.log.info(f'{user} - {action} - {uuid} - {hidden} | {base_image}')
 
     # patch: appchain-12-cloud-AWS-AKIA24NPM6LZW76RJSQG
-    if action in ('apply', 'destroy'):
+    if action in ('apply', 'destroy', 'update'):
         task = item['task']
         if task['cloud_vendor'] == 'AWS':
             task['access_key'] = user.rsplit('-', 1)[1]
@@ -292,7 +302,9 @@ def update_task(uuid):
         # 20210923 add validator name
         if not task.get('name', None):
             task['name'] = 'validator-' + item['uuid']
-        # 20210923 add validator name
+        # 20220312 update base image
+        if action == 'update':
+            task['base_image'] = base_image
 
     if action == 'apply':
         if item['state'] in (STATUS_INIT, STATUS_DESTROY_SUCCESS):
@@ -311,7 +323,7 @@ def update_task(uuid):
         else:
             raise BadRequestError(f"Task[state {item['state']}] doesn't support this action")
     elif action == 'destroy':
-        if item['state'] in (STATUS_APPLY_FAILED, STATUS_APPLY_SUCCESS, STATUS_DESTROY_FAILED):
+        if item['state'] in (STATUS_APPLY_FAILED, STATUS_APPLY_SUCCESS, STATUS_DESTROY_FAILED, STATUS_UPDATE_FAILED, STATUS_UPDATE_SUCCESS):
             item['state'] = STATUS_DESTROY_PROCESS
             get_task_db().update_item(item)
             get_task_sqs_client().send_message(
@@ -324,6 +336,22 @@ def update_task(uuid):
                 })
             )
             return {'state': STATUS_DESTROY_PROCESS}
+        else:
+            raise BadRequestError(f"Task[state {item['state']}] doesn't support this action")
+    elif action == 'update':
+        if item['state'] in (STATUS_APPLY_SUCCESS,):
+            item['state'] = STATUS_UPDATE_PROCESS
+            get_task_db().update_item(item)
+            get_task_sqs_client().send_message(
+                QueueUrl=os.environ['TASKS_QUEUE_URL'],
+                MessageBody=json.dumps({
+                    'user': user,
+                    'action': action,
+                    'uuid': item['uuid'],
+                    'task': task
+                })
+            )
+            return {'state': STATUS_UPDATE_PROCESS}
         else:
             raise BadRequestError(f"Task[state {item['state']}] doesn't support this action")
     else:
@@ -456,6 +484,12 @@ def handle_message(event):
 
         # upload terraform.tfvars.json
         var_file = os.path.join(workspace, 'terraform.tfvars.json')
+        # patch: terraform default action is setup, process update action
+        if action == 'update':
+            task['action'] = 'update'
+        else:
+            task.pop('action', None)
+        # patch: terraform default action is setup, process update action
         with open(var_file, 'w') as f:
             task.update({'workspace': os.path.join('workspace', uuid)})
             f.write(json.dumps(task))
@@ -523,6 +557,10 @@ def handle_object(event):
         item['state'] = state
         if ret == '0':
             item['extend'] = {}
+    elif action == 'update':
+        state = STATUS_APPLY_SUCCESS if ret == '0' else STATUS_APPLY_FAILED
+        item['state'] = state
+        # item['base_image'] = ?
     get_task_db().update_item(item)
 
     # update task log
