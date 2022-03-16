@@ -249,6 +249,95 @@ def get_task(uuid):
     return item
 
 
+@app.route('/tasks/{uuid}/metrics', methods=['GET'], cors=True, authorizer=authorizer)
+def get_task(uuid):
+    '''
+    {
+        'cpu': {
+            '0': {'id': 49383555.15, 'wa': 7006.39, 'hi': 0.0, 'ni': 3419.42, 'si': 6318.0, 'st': 193679.68, 'sy': 763925.34, 'us': 47050038.59, 'percentage': 0.4930233218455299}, 
+            '1': {'id': 49336940.52, 'wa': 6468.56, 'hi': 0.0, 'ni': 3534.65, 'si': 44747.13, 'st': 195782.7, 'sy': 761354.65, 'us': 47042978.06, 'percentage': 0.49341795362925245}
+        }, 
+        'memory': {'buff': 85889024.0, 'cache': 1078288384.0, 'avail': 1501220864.0, 'free': 159641600.0, 'total': 2097152000.0, 'used': 1937510400.0. 'percentage': 0.927876953125}, 
+        'filesystem': {'avail': 26138632192.0, 'total': 41442127872.0, 'percentage': 0.36927388784830395}
+    }
+    '''
+    user = get_authorized_username(app.current_request)
+    item = get_task_db().get_item(uuid, user=user)
+    if not item:
+        raise NotFoundError("Task doesn't exist")
+
+    ip = item.get('extend', {}).get('ip')
+    if not ip or item['state'] != STATUS_APPLY_SUCCESS:
+        raise NotFoundError("Task not deployed")
+
+    import requests
+    from prometheus_client.parser import text_string_to_metric_families
+
+    u, p = 'prometheus', 'node_exporter'
+    r = requests.get(f'http://{ip}:9100/metrics', auth=(u, p), timeout=10)
+    if r.status_code != 200:
+        raise NotFoundError("Task not monitored")
+
+    # parse metric
+    CPU = {
+        'user': 'us',
+        'system': 'sy',
+        'nice': 'ni',
+        'idle': 'id',
+        'iowait': 'wa',
+        'irq': 'hi',
+        'softirq': 'si',
+        'steal': 'st'
+    }
+    MEMORY = {
+        'node_memory_MemTotal_bytes': 'total',
+        'node_memory_MemFree_bytes': 'free',
+        'node_memory_MemAvailable_bytes': 'avail',
+        'node_memory_Buffers_bytes': 'buff',
+        'node_memory_Cached_bytes': 'cache'
+    }
+    FILESYSTEM = {
+        'node_filesystem_size_bytes': 'total',
+        'node_filesystem_avail_bytes': 'avail',
+    }
+
+    metrics = {'cpu': {}, 'memory': {}, 'filesystem': {}}
+    for family in text_string_to_metric_families(r.text):
+        for sample in family.samples:
+            # cpu
+            if sample[0] == 'node_cpu_seconds_total':
+                cpu, mode = sample[1].get('cpu'), CPU.get(sample[1].get('mode'))
+                if cpu and mode:
+                    info = metrics['cpu'].get(cpu, {})
+                    info[mode] = sample[2]
+                    metrics['cpu'][cpu] = info
+            # memory
+            if sample[0] in MEMORY:
+                key = MEMORY.get(sample[0])
+                metrics['memory'][key] = sample[2]
+            # filesysytem /
+            if sample[0] in FILESYSTEM and sample[1].get('mountpoint') == '/':
+                key = FILESYSTEM.get(sample[0])
+                metrics['filesystem'][key] = sample[2]
+    # cpu used percentage
+    for _, v in metrics['cpu'].items():
+        total = sum(v.values())
+        idle = v.get('id') / total
+        v['percentage'] = 1 - idle # used
+    # memory used bytes
+    memory_total = metrics['memory'].get('total')
+    memory_free = metrics['memory'].get('free')
+    if memory_total and memory_free:
+        metrics['memory']['used'] = memory_total- memory_free
+        metrics['memory']['percentage'] = metrics['memory']['used']/memory_total
+    # filesysytem used percentage
+    filesystem_total = metrics['filesystem'].get('total')
+    filesystem_avail = metrics['filesystem'].get('avail')
+    if filesystem_total and filesystem_avail:
+        metrics['filesystem']['percentage'] = 1 - filesystem_avail/filesystem_total
+    return metrics
+
+
 @app.route('/tasks/{uuid}', methods=['DELETE'], cors=True, authorizer=authorizer)
 def delete_task(uuid):
     user = get_authorized_username(app.current_request)
