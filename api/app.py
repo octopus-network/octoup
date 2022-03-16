@@ -250,7 +250,7 @@ def get_task(uuid):
 
 
 @app.route('/tasks/{uuid}/metrics', methods=['GET'], cors=True, authorizer=authorizer)
-def get_task(uuid):
+def get_metrics(uuid):
     '''
     {
         'cpu': {
