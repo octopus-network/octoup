@@ -8,8 +8,10 @@ import boto3
 from boto3.session import Session
 from chalice import (
     Chalice,
+    Response,
     CognitoUserPoolAuthorizer,
     BadRequestError,
+    ForbiddenError,
     NotFoundError,
     WebsocketDisconnectedError
 )
@@ -274,11 +276,17 @@ def get_metrics(uuid):
     from prometheus_client.parser import text_string_to_metric_families
 
     u, p = 'prometheus', 'node_exporter'
-    r = requests.get(f'http://{ip}:9100/metrics', auth=(u, p), timeout=10)
-    if r.status_code != 200:
+    r1 = requests.get(f'http://{ip}:9100/metrics', auth=(u, p), timeout=10)
+    if r1.status_code != 200:
         raise NotFoundError("Task not monitored")
-
-    # parse metric
+    
+    # TODO: simulate rate 2 second
+    time.sleep(2.0)
+    r2 = requests.get(f'http://{ip}:9100/metrics', auth=(u, p), timeout=10)
+    if r2.status_code != 200:
+        raise NotFoundError("Task not monitored")
+    # TODO: simulate rate 2 second
+    
     CPU = {
         'user': 'us',
         'system': 'sy',
@@ -301,16 +309,28 @@ def get_metrics(uuid):
         'node_filesystem_avail_bytes': 'avail',
     }
 
-    metrics = {'cpu': {}, 'memory': {}, 'filesystem': {}}
-    for family in text_string_to_metric_families(r.text):
+    prev_cpu = {}
+    for family in text_string_to_metric_families(r1.text):
         for sample in family.samples:
             # cpu
             if sample[0] == 'node_cpu_seconds_total':
                 cpu, mode = sample[1].get('cpu'), CPU.get(sample[1].get('mode'))
                 if cpu and mode:
-                    info = metrics['cpu'].get(cpu, {})
+                    info = prev_cpu.get(cpu, {})
                     info[mode] = sample[2]
-                    metrics['cpu'][cpu] = info
+                    prev_cpu[cpu] = info
+
+    post_cpu = {}
+    metrics = {'cpu': {}, 'memory': {}, 'filesystem': {}}
+    for family in text_string_to_metric_families(r2.text):
+        for sample in family.samples:
+            # cpu
+            if sample[0] == 'node_cpu_seconds_total':
+                cpu, mode = sample[1].get('cpu'), CPU.get(sample[1].get('mode'))
+                if cpu and mode:
+                    info = post_cpu.get(cpu, {})
+                    info[mode] = sample[2]
+                    post_cpu[cpu] = info
             # memory
             if sample[0] in MEMORY:
                 key = MEMORY.get(sample[0])
@@ -319,11 +339,6 @@ def get_metrics(uuid):
             if sample[0] in FILESYSTEM and sample[1].get('mountpoint') == '/':
                 key = FILESYSTEM.get(sample[0])
                 metrics['filesystem'][key] = sample[2]
-    # cpu used percentage
-    for _, v in metrics['cpu'].items():
-        total = sum(v.values())
-        idle = v.get('id') / total
-        v['percentage'] = 1 - idle # used
     # memory used bytes
     memory_total = metrics['memory'].get('total')
     memory_free = metrics['memory'].get('free')
@@ -335,7 +350,49 @@ def get_metrics(uuid):
     filesystem_avail = metrics['filesystem'].get('avail')
     if filesystem_total and filesystem_avail:
         metrics['filesystem']['percentage'] = 1 - filesystem_avail/filesystem_total
+    # cpu used percentage (post-prev)
+    for k, v in post_cpu.items():
+        for _k in CPU.values():
+            info = metrics['cpu'].get(k, {})
+            info[_k] = v[_k] - prev_cpu[k][_k]
+            metrics['cpu'][k] = info
+        total = sum(metrics['cpu'][k].values())
+        idle = metrics['cpu'][k]['id'] / total
+        metrics['cpu'][k]['percentage'] = 1 - idle # used
     return metrics
+
+
+@app.route('/tasks/{uuid}/ssh_key', methods=['GET'], cors=True, authorizer=authorizer)
+def get_ssh_key(uuid):
+    baisc = get_authorized_username(app.current_request)
+    splited = baisc.split('@', 1)
+    if len(splited) != 2:
+        raise BadRequestError("Invalid authorization")
+
+    user, secret = splited[0], splited[1]
+    item = get_task_db().get_item(uuid, user=user)
+    if not item:
+        raise NotFoundError("Task doesn't exist")
+    if len(secret) < 8:
+        raise BadRequestError("Invalid secret_key|access_token")
+
+    access = user.rsplit('-', 1)[1]
+    session = boto3.Session(aws_access_key_id=access, aws_secret_access_key=secret)
+    client = session.client('sts')
+    try:
+        client.get_caller_identity()
+    except:
+        raise ForbiddenError("Invalid secret_key")
+
+    extend = item.get('extend', {})
+    key = extend.get('key')
+    if not key:
+        raise NotFoundError("SSH key doesn't exist")
+
+    s3_client = get_s3_client()
+    params = {'Bucket': os.environ['OCTOUP_BUCKET'], 'Key': key}
+    url = s3.generate_presigned_url(s3_client, 'get_object', params, 3600)
+    return Response(body='', headers={'Location': url}, status_code=301)
 
 
 @app.route('/tasks/{uuid}', methods=['DELETE'], cors=True, authorizer=authorizer)
